@@ -39,19 +39,19 @@ public with sharing class CTLocationController {
     }
     
     /**
-     * Search locations by name, address or pincode
+     * Search locations by name, address or Pincode
      * @param searchTerm Search term
      * @return List<Location__c> List of locations matching the search term
      */
     public static List<Location__c> searchLocations(String searchTerm) {
         searchTerm = '%' + searchTerm + '%';
         return [
-            SELECT Id, Name, Address__c, Pincode__c, Status__c
+            SELECT Id, Name, Address__c, Pincode__c, Status__c, Status_Update_Date__c
             FROM Location__c 
             WHERE Name LIKE :searchTerm 
                 OR Address__c LIKE :searchTerm 
                 OR Pincode__c LIKE :searchTerm
-            ORDER BY Name
+            ORDER BY Status_Update_Date__c DESC
         ];
     }
     
@@ -62,7 +62,7 @@ public with sharing class CTLocationController {
      */
     public static Location__c getLocationById(String locationId) {
         List<Location__c> locations = [
-            SELECT Id, Name, Address__c, Pincode__c, Status__c, Status_Update_Date__c
+            SELECT Id, Name, Address__c, Pincode__c, Status__c, Status_Update_Date__c, Red_Score__c
             FROM Location__c 
             WHERE Id = :locationId
         ];
@@ -70,5 +70,18 @@ public with sharing class CTLocationController {
             return locations[0];
         }
         return null;
+    }
+    
+    /**
+     * Get recent status changes
+     * @return List<Location__c> List of locations with recent status changes
+     */
+    public static List<Location__c> getRecentStatusChanges() {
+        return [
+            SELECT Id, Name, Address__c, Pincode__c, Status__c, Status_Update_Date__c, Red_Score__c
+            FROM Location__c
+            ORDER BY Status_Update_Date__c DESC
+            LIMIT 100
+        ];
     }
 }
