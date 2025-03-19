@@ -103,4 +103,92 @@ public with sharing class CTLocationTracingController {
             return 'Error: ' + e.getMessage();
         }
     }
+    
+    /**
+     * Check for duplicate location tracing records
+     * @param locationTraces List of location tracing records to check
+     * @return List<Location_Tracing__c> List of existing duplicate records
+     */
+    public static List<Location_Tracing__c> checkDuplicates(List<Location_Tracing__c> locationTraces) {
+        // Maps to track duplicates
+        Map<String, Location_Tracing__c> uniqueKeyToRecordMap = new Map<String, Location_Tracing__c>();
+        Set<String> duplicateKeys = new Set<String>();
+        
+        // First find duplicates within the input list
+        for (Location_Tracing__c trace : locationTraces) {
+            // Create a composite key
+            String key = String.valueOf(trace.Person__c) + '-' + 
+                         String.valueOf(trace.Location__c) + '-' + 
+                         (trace.Visit_Date__c != null ? String.valueOf(trace.Visit_Date__c) : 'null');
+            
+            // If this key already exists in our map, it's a duplicate
+            if (uniqueKeyToRecordMap.containsKey(key)) {
+                duplicateKeys.add(key);
+            } else {
+                uniqueKeyToRecordMap.put(key, trace);
+            }
+        }
+        
+        // Extract criteria for database query
+        Set<Id> personIds = new Set<Id>();
+        Set<Id> locationIds = new Set<Id>();
+        Set<Date> visitDates = new Set<Date>();
+        Boolean hasNullDates = false;
+        
+        for (Location_Tracing__c trace : locationTraces) {
+            personIds.add(trace.Person__c);
+            locationIds.add(trace.Location__c);
+            if (trace.Visit_Date__c != null) {
+                visitDates.add(trace.Visit_Date__c);
+            } else {
+                hasNullDates = true;
+            }
+        }
+        
+        // Query for existing duplicates in database
+        List<Location_Tracing__c> existingRecords = new List<Location_Tracing__c>();
+        
+        String query = 'SELECT Id, Person__c, Location__c, Visit_Date__c ' +
+                      'FROM Location_Tracing__c ' +
+                      'WHERE Person__c IN :personIds ' +
+                      'AND Location__c IN :locationIds';
+                      
+        if (!visitDates.isEmpty() && hasNullDates) {
+            query += ' AND (Visit_Date__c IN :visitDates OR Visit_Date__c = null)';
+        } else if (!visitDates.isEmpty()) {
+            query += ' AND Visit_Date__c IN :visitDates';
+        } else if (hasNullDates) {
+            query += ' AND Visit_Date__c = null';
+        }
+        
+        existingRecords = Database.query(query);
+        
+        // Find database records that match our input records
+        List<Location_Tracing__c> duplicates = new List<Location_Tracing__c>();
+        
+        for (Location_Tracing__c dbRecord : existingRecords) {
+            String key = String.valueOf(dbRecord.Person__c) + '-' + 
+                        String.valueOf(dbRecord.Location__c) + '-' + 
+                        (dbRecord.Visit_Date__c != null ? String.valueOf(dbRecord.Visit_Date__c) : 'null');
+                        
+            if (uniqueKeyToRecordMap.containsKey(key)) {
+                duplicates.add(dbRecord);
+            }
+        }
+        
+        return duplicates;
+    }
+    
+    // Helper class to store person-location-date combinations
+    private class PersonLocationDateKey {
+        public Id personId;
+        public Id locationId;
+        public Date visitDate;
+        
+        public PersonLocationDateKey(Id personId, Id locationId, Date visitDate) {
+            this.personId = personId;
+            this.locationId = locationId;
+            this.visitDate = visitDate;
+        }
+    }
 }
