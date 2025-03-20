@@ -84,4 +84,25 @@ public with sharing class CTLocationController {
             LIMIT 100
         ];
     }
+    
+    /**
+     * Get count of locations by status
+     * @return Map<String, Integer> Map of status to count of locations with that status
+     */
+    public static Map<String, Integer> getStatusCount() {
+        Map<String, Integer> statusCountMap = new Map<String, Integer>();
+        
+        // Query to count locations by status
+        for(AggregateResult ar : [
+            SELECT Status__c, COUNT(Id) countOfLocations
+            FROM Location__c
+            GROUP BY Status__c
+        ]) {
+            String status = (String)ar.get('Status__c');
+            Integer statusCount = (Integer)ar.get('countOfLocations');
+            statusCountMap.put(status, statusCount);
+        }
+        
+        return statusCountMap;
+    }
 }
