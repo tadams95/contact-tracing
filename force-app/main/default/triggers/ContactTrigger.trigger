@@ -1,15 +1,16 @@
+/**
+ * @description Trigger for Contact object that handles counting active contacts
+ * for related Account records
+ */
 trigger ContactTrigger on Contact (after insert, after update, after delete, after undelete) {
-    switch on Trigger.operationType {
-        when AFTER_INSERT {
+    if (Trigger.isAfter) {
+        if (Trigger.isInsert) {
             ContactTriggerHandler.afterInsertHandler(Trigger.new);
-        }
-        when AFTER_UPDATE {
+        } else if (Trigger.isUpdate) {
             ContactTriggerHandler.afterUpdateHandler(Trigger.new, Trigger.oldMap);
-        }
-        when AFTER_DELETE {
+        } else if (Trigger.isDelete) {
             ContactTriggerHandler.afterDeleteHandler(Trigger.old);
-        }
-        when AFTER_UNDELETE {
+        } else if (Trigger.isUndelete) {
             ContactTriggerHandler.afterUndeleteHandler(Trigger.new);
         }
     }
